@@ -1,0 +1,8 @@
+name: astrbot_plugin_forward_merged_reply
+display_name: forward_merged_reply
+short_desc: 让 AstrBot 理解并回应被引用的 QQ 合并转发消息
+desc: 仅在“引用消息并 @bot”场景下展开 QQ 合并转发记录，为模型注入上下文，并在回复前先发送简短处理中提示。
+version: v1.0.0
+author: Codex
+repo: https://example.com/astrbot_plugin_forward_merged_reply
+astrbot_version: ">=4.24,<5"

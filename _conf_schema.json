@@ -1,0 +1,49 @@
+{
+  "enabled": {
+    "description": "是否启用引用合并转发消息解析",
+    "type": "bool",
+    "hint": "关闭后插件不会对引用的合并转发消息做任何处理。",
+    "default": true
+  },
+  "debug_logging": {
+    "description": "是否输出调试日志",
+    "type": "bool",
+    "hint": "开启后会打印 message_obj、raw_message、引用对象类型等结构信息，便于适配不同 QQ 消息格式。",
+    "default": false
+  },
+  "processing_message": {
+    "description": "在正式回复前先发送的简短提示语",
+    "type": "string",
+    "default": "正在分析这份转发记录，请稍等。"
+  },
+  "system_guidance": {
+    "description": "注入给模型的任务与风格提示词",
+    "type": "string",
+    "hint": "这里可以改默认任务导向和说话风格，比如是否更口语、是否默认解释内容、是否默认不给代回复建议。",
+    "default": "下面附带的是用户引用的一份或多份 QQ 合并转发记录展开内容。请根据用户当前提问和这些记录正常作答：该回应就回应，该总结就总结，该提取信息就提取信息，不要默认把任务改写成纯总结。"
+  },
+  "reply_max_chars": {
+    "description": "最终回复的目标最大字数",
+    "type": "int",
+    "hint": "插件会尽量把回复压到这个字数内，适合控制成更短、更口语的风格。",
+    "default": 80
+  },
+  "max_depth": {
+    "description": "递归展开合并转发时允许的最大嵌套层数",
+    "type": "int",
+    "hint": "用于限制多层嵌套合并消息的展开深度。",
+    "default": 4
+  },
+  "max_nodes": {
+    "description": "单次最多展开的节点数量",
+    "type": "int",
+    "hint": "超过后会截断，避免超长记录拖慢回复。",
+    "default": 80
+  },
+  "max_chars": {
+    "description": "注入给模型的最大字符数",
+    "type": "int",
+    "hint": "超出后会在末尾截断，避免上下文过长。",
+    "default": 12000
+  }
+}
