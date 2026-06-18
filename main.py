@@ -12,9 +12,14 @@ PLUGIN_DIR = Path(__file__).resolve().parent
 if str(PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(PLUGIN_DIR))
 
-from fmr_forward import ForwardResolver
-from fmr_persona import PersonaResolver
-from fmr_reply import shorten_reply_text
+try:
+    from .fmr_forward import ForwardResolver
+    from .fmr_persona import PersonaResolver
+    from .fmr_reply import shorten_reply_text
+except ImportError:
+    from fmr_forward import ForwardResolver
+    from fmr_persona import PersonaResolver
+    from fmr_reply import shorten_reply_text
 
 
 PLUGIN_ID = "astrbot_plugin_forward_merged_reply"
@@ -51,8 +56,6 @@ class ForwardMergedReplyPlugin(Star):
         rendered, image_urls = await resolver.render_forward_bundle_with_fetch(event, quoted)
         if not rendered:
             yield event.plain_result("我看到你引用了消息，但暂时没能解析出可用的转发内容。")
-            return
-        if resolver.should_ignore_rendered_forward(rendered):
             return
 
         event.stop_event()

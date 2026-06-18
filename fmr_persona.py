@@ -6,6 +6,8 @@ from typing import Any
 class PersonaResolver:
     def __init__(self, context: Any) -> None:
         self.context = context
+        self._conversation_cache: dict[tuple[str, tuple[str, ...]], Any | None] = {}
+        self._persona_prompt_cache: dict[str, str] = {}
 
     async def resolve_prompt(self, event: Any) -> str:
         provider = self._get_provider(event)
@@ -56,27 +58,36 @@ class PersonaResolver:
         if conversation_manager is None:
             return None
 
+        platform_id = self._platform_id(event)
+        identifiers = tuple(self._conversation_identifiers(event))
+        cache_key = (platform_id, identifiers)
+        if cache_key in self._conversation_cache:
+            return self._conversation_cache[cache_key]
+
         get_conversations = getattr(conversation_manager, "get_conversations", None)
         if not callable(get_conversations):
             return None
 
         try:
-            conversations = await get_conversations(platform_id=self._platform_id(event))
+            conversations = await get_conversations(platform_id=platform_id)
         except Exception:
             return None
         if not conversations:
+            self._conversation_cache[cache_key] = None
             return None
 
-        identifiers = self._conversation_identifiers(event)
         for conv in conversations:
             user_id = getattr(conv, "user_id", None)
             if not isinstance(user_id, str) or not user_id.strip():
                 continue
             normalized = user_id.strip()
             if normalized in identifiers:
+                self._conversation_cache[cache_key] = conv
                 return conv
             if any(normalized.endswith(f"_{identifier}") for identifier in identifiers):
+                self._conversation_cache[cache_key] = conv
                 return conv
+        self._conversation_cache[cache_key] = None
         return None
 
     def _platform_id(self, event: Any) -> str:
@@ -118,6 +129,9 @@ class PersonaResolver:
         return [identifier for identifier in identifiers if identifier]
 
     def _find_persona_prompt_by_name(self, personas: Any, persona_name: str) -> str:
+        cached = self._persona_prompt_cache.get(persona_name)
+        if cached is not None:
+            return cached
         if not isinstance(personas, list):
             return ""
         for persona in personas:
@@ -127,5 +141,8 @@ class PersonaResolver:
                 continue
             prompt = persona.get("prompt")
             if isinstance(prompt, str) and prompt.strip():
-                return prompt.strip()
+                resolved = prompt.strip()
+                self._persona_prompt_cache[persona_name] = resolved
+                return resolved
+        self._persona_prompt_cache[persona_name] = ""
         return ""
