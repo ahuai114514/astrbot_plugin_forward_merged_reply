@@ -83,7 +83,34 @@ class ForwardResolver:
         if not self.has_explicit_at_bot(event):
             return False
         quoted = self.extract_quoted_message(event)
-        return quoted is not None and self.contains_forward_content(quoted)
+        return quoted is not None and self.has_explicit_forward_reference(event, quoted)
+
+    def has_explicit_forward_reference(self, event: Any, root: Any) -> bool:
+        if self.has_forward_component(root):
+            return True
+        if self.extract_forward_message_ids(event, root):
+            return True
+        return bool(self.extract_forward_nodes(root))
+
+    def has_forward_component(self, root: Any) -> bool:
+        return self.has_forward_component_inner(root, depth=0, seen=set())
+
+    def has_forward_component_inner(self, current: Any, depth: int, seen: set[int]) -> bool:
+        if current is None or depth > self.max_depth:
+            return False
+
+        marker = id(current)
+        if marker in seen:
+            return False
+        seen.add(marker)
+
+        if isinstance(current, Comp.Forward):
+            return True
+
+        for child in self.iter_nested_values(current):
+            if self.has_forward_component_inner(child, depth + 1, seen):
+                return True
+        return False
 
     def extract_quoted_message(self, event: Any) -> Any | None:
         message_obj = getattr(event, "message_obj", None)
@@ -537,11 +564,22 @@ class ForwardResolver:
     def looks_like_node(self, value: Any) -> bool:
         if isinstance(value, Comp.Node):
             return True
-        for attr in ("uin", "name", "nickname", "sender", "content", "message"):
+        sender_like = False
+        content_like = False
+        for attr in ("uin", "name", "nickname", "sender", "sender_name"):
             if hasattr(value, attr):
-                return True
+                sender_like = True
+                break
+        for attr in ("content", "message", "message_chain", "chain", "messages"):
+            if hasattr(value, attr):
+                content_like = True
+                break
+        if sender_like and content_like:
+            return True
         if isinstance(value, dict):
-            return any(key in value for key in ("uin", "name", "nickname", "sender", "content", "message", "id"))
+            has_sender = any(key in value for key in ("uin", "name", "nickname", "sender", "sender_name"))
+            has_content = any(key in value for key in ("content", "message", "message_chain", "chain", "messages"))
+            return has_sender and has_content
         return False
 
     def node_sender_name(self, node: Any) -> str:
