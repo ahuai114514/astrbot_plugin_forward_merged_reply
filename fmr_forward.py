@@ -90,7 +90,7 @@ class ForwardResolver:
             return True
         if self.extract_forward_message_ids(event, root):
             return True
-        return bool(self.extract_forward_nodes(root))
+        return False
 
     def has_forward_component(self, root: Any) -> bool:
         return self.has_forward_component_inner(root, depth=0, seen=set())

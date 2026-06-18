@@ -14,7 +14,7 @@
   "processing_message": {
     "description": "在正式回复前先发送的简短提示语",
     "type": "string",
-    "default": "正在分析这份转发记录，请稍等。"
+    "default": "让我康康"
   },
   "system_guidance": {
     "description": "注入给模型的任务与风格提示词",
