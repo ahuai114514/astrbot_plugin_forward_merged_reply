@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from collections.abc import Iterable, Sequence
+import re
 from typing import Any
 
 from astrbot.api import logger
@@ -49,6 +50,8 @@ NESTED_ATTRS = (
     "merged_messages",
 )
 PAYLOAD_NESTED_KEYS = ("messages", "msgs", "data", "records", "children", "content", "message")
+BOT_LIKE_SENDER_RE = re.compile(r"(助手|bot|gpt|ai|机器人|tool)", re.IGNORECASE)
+BOT_LIKE_CONTENT_RE = re.compile(r"(搜图|识图|来源|Google\s*Lens|SauceNAO|ascii2d|trace\.moe|搜索结果)", re.IGNORECASE)
 
 
 class ForwardResolver:
@@ -87,8 +90,6 @@ class ForwardResolver:
 
     def has_explicit_forward_reference(self, event: Any, root: Any) -> bool:
         if self.has_forward_component(root):
-            return True
-        if self.extract_forward_message_ids(event, root):
             return True
         return False
 
@@ -144,6 +145,31 @@ class ForwardResolver:
 
         return self.render_forward_bundle(root), []
 
+    def should_ignore_rendered_forward(self, rendered: str) -> bool:
+        if not isinstance(rendered, str) or not rendered.strip():
+            return False
+
+        senders: set[str] = set()
+        for line in rendered.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("["):
+                continue
+            if ":" not in stripped:
+                continue
+            sender, _body = stripped.split(":", 1)
+            sender = sender.strip()
+            if sender:
+                senders.add(sender)
+
+        if len(senders) != 1:
+            return False
+
+        sender = next(iter(senders))
+        if not BOT_LIKE_SENDER_RE.search(sender):
+            return False
+
+        return bool(BOT_LIKE_CONTENT_RE.search(rendered))
+
     async def fetch_forward_payloads(self, event: Any, root: Any) -> list[Any]:
         message_ids = self.extract_forward_message_ids(event, root)
         if self.debug_enabled:
@@ -177,7 +203,7 @@ class ForwardResolver:
                     )
         return payloads
 
-    def extract_forward_message_ids(self, event: Any, root: Any) -> list[str]:
+    def extract_forward_message_ids(self, event: Any, root: Any, allow_event_raw_fallback: bool = True) -> list[str]:
         ids: list[str] = []
         seen: set[str] = set()
 
@@ -199,19 +225,20 @@ class ForwardResolver:
                 if isinstance(component, Comp.Forward):
                     push(getattr(component, "id", None))
 
-        raw_payload = self.raw_payload_from_event(event)
-        if isinstance(raw_payload, dict):
-            for element in raw_payload.get("elements", []) or []:
-                if not isinstance(element, dict):
-                    continue
-                reply_element = element.get("replyElement")
-                if isinstance(reply_element, dict):
-                    push(reply_element.get("sourceMsgIdInRecords"))
-                    push(reply_element.get("replayMsgId"))
+        if allow_event_raw_fallback:
+            raw_payload = self.raw_payload_from_event(event)
+            if isinstance(raw_payload, dict):
+                for element in raw_payload.get("elements", []) or []:
+                    if not isinstance(element, dict):
+                        continue
+                    reply_element = element.get("replyElement")
+                    if isinstance(reply_element, dict):
+                        push(reply_element.get("sourceMsgIdInRecords"))
+                        push(reply_element.get("replayMsgId"))
 
-            for record in raw_payload.get("records", []) or []:
-                if isinstance(record, dict):
-                    push(record.get("msgId"))
+                for record in raw_payload.get("records", []) or []:
+                    if isinstance(record, dict):
+                        push(record.get("msgId"))
 
         return ids
 

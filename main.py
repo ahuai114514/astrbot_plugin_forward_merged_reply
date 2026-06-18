@@ -52,6 +52,8 @@ class ForwardMergedReplyPlugin(Star):
         if not rendered:
             yield event.plain_result("我看到你引用了消息，但暂时没能解析出可用的转发内容。")
             return
+        if resolver.should_ignore_rendered_forward(rendered):
+            return
 
         event.stop_event()
         await event.send(event.plain_result(self._processing_message()))
