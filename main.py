@@ -32,7 +32,7 @@ DEFAULT_SYSTEM_GUIDANCE = (
 )
 
 
-@register(PLUGIN_ID, "Codex", "让 Bot 理解并回应被引用的 QQ 合并转发消息", "1.0.0")
+@register(PLUGIN_ID, "ahuai", "让 Bot 理解并回应被引用的 QQ 合并转发消息", "1.0.0")
 class ForwardMergedReplyPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig | None = None) -> None:
         super().__init__(context)
